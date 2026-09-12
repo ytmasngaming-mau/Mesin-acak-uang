@@ -46,7 +46,7 @@
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Langsung ke Database</p>
             <input type="text" id="usernameInput" placeholder="Username">
             <input type="password" id="passwordInput" placeholder="Password">
-            <button class="btn" onclick="prosesLogin()">Masuk / Daftar</button>
+            <button class="btn" id="btnAuth">Masuk / Daftar</button>
         </div>
     </div>
 
@@ -172,7 +172,6 @@
             last_checkin: '' 
         };
 
-        // Cek login otomatis saat halaman dimuat
         if (currentUser) {
             supabase.from('users').select('*').eq('username', currentUser).maybeSingle().then(({ data }) => {
                 if (data) userData = data;
@@ -184,7 +183,7 @@
             document.getElementById('authPage').style.display = 'flex';
         }
 
-        async function prosesLogin() {
+        document.getElementById('btnAuth').addEventListener('click', async function() {
             let uName = document.getElementById('usernameInput').value.trim();
             let pass = document.getElementById('passwordInput').value.trim();
 
@@ -228,7 +227,7 @@
             } catch (err) {
                 alert("Koneksi gagal: " + err.message);
             }
-        }
+        });
 
         async function syncKeDatabase() {
             try {
