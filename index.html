@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesin Acak Uang Online</title>
+    <!-- Panggil Library Supabase JS v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: #f4f6f9; color: #333; padding-bottom: 70px; }
+        
+        header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; }
+
+        .page { display: none; padding: 15px; }
+        .active-page { display: block; }
+
+        #authPage {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #007bff; display: flex; justify-content: center; align-items: center; z-index: 999;
+        }
+        .auth-card { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .auth-card h2 { margin-bottom: 15px; color: #007bff; }
+
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card h3 { font-size: 14px; color: #666; margin-bottom: 5px; }
+        .card p { font-size: 20px; font-weight: bold; color: #007bff; }
+
+        .btn { background: #007bff; color: white; border: none; padding: 10px 15px; width: 100%; border-radius: 5px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn:active { background: #0056b3; }
+        .mission-box { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        .leaderboard-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+        .leaderboard-item:last-child { border-bottom: none; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #007bff; display: none; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); }
+        .nav-item { color: white; text-align: center; font-size: 12px; cursor: pointer; flex: 1; background: none; border: none; }
+        .nav-item div { font-size: 18px; margin-bottom: 2px; }
+
+        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <!-- HALAMAN LOGIN / DAFTAR -->
+    <div id="authPage">
+        <div class="auth-card">
+            <h2>Mesin Acak Uang</h2>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Langsung ke Database</p>
+            
+            <input type="text" id="usernameInput" placeholder="Username">
+            <input type="password" id="passwordInput" placeholder="Password">
+            
+            <button class="btn" id="btnAuth">Masuk / Daftar</button>
+        </div>
+    </div>
+
+    <header>Mesin Acak Uang</header>
+
+    <!-- MENU 1: BERANDA -->
+    <div id="beranda" class="page">
+        <div class="card">
+            <h3>Halo, <span id="userAktif" style="color:#007bff;">Guest</span></h3>
+            <p style="font-size: 12px; color: #28a745; margin-top: 2px;">● Terhubung ke Supabase Online</p>
+        </div>
+        <div class="card">
+            <h3>Saldo Koin (Rupiah)</h3>
+            <p id="txtSaldo">Rp 0</p>
+        </div>
+        <div class="card">
+            <h3>Poin Spin (Modal Main)</h3>
+            <p id="txtPoin" style="color: #28a745;">50 Poin</p>
+        </div>
+        
+        <!-- LEADERBOARD TOP 10 -->
+        <div class="card">
+            <h3>🏆 Top 10 Penghasilan Terbanyak</h3>
+            <div id="leaderboardList" style="margin-top: 10px;">Memuat data...</div>
+        </div>
+    </div>
+
+    <!-- MENU 2: MISI -->
+    <div id="misi" class="page">
+        <h3 style="margin-bottom: 10px;">Daftar Misi Cuan</h3>
+        
+        <!-- CHECK-IN -->
+        <div class="mission-box">
+            <strong>Check-in Harian</strong>
+            <p style="font-size: 12px; color: #666; margin: 3px 0;">Klaim hadiah harian 50 Poin & 100 Koin gratis!</p>
+            <button class="btn" onclick="klaimCheckin()">Check-in Sekarang</button>
+        </div>
+
+        <!-- SPIN UTAMA -->
+        <div class="mission-box">
+            <strong>Spin Wheel Utama</strong>
+            <p style="font-size: 12px; color: #666; margin: 3px 0;">Modal 10 Poin | Hadiah 100-1000 Koin (Sangat Susah!)</p>
+            <button class="btn" onclick="spinUtama()">Main Spin</button>
+        </div>
+
+        <!-- SPIN WHEEL LITE -->
+        <div class="mission-box">
+            <strong>Spin Wheel Lite (Nonton Iklan)</strong>
+            <p style="font-size: 12px; color: #666; margin: 3px 0;">Nonton iklan biasa | Hadiah 30-80 Koin</p>
+            <button class="btn" onclick="spinLite()">Nonton Iklan Lite</button>
+        </div>
+
+        <!-- MISI WD INSTAN (PILIH TARGET) -->
+        <div class="mission-box" style="border-left: 4px solid #ffc107;">
+            <strong>Misi WD Instan Target Iklan</strong>
+            <p style="font-size: 12px; color: #666; margin: 3px 0;" id="infoTargetStatus">Pilih target misi WD instan yang ingin dikerjakan:</p>
+            
+            <div id="pilihanTargetBox" style="display: flex; gap: 5px; margin-top: 8px;">
+                <button class="btn" style="font-size: 12px; padding: 6px; background: #007bff;" onclick="pilihTargetWd(10, 1000)">Target 1K (10x)</button>
+                <button class="btn" style="font-size: 12px; padding: 6px; background: #e0a800;" onclick="pilihTargetWd(20, 2000)">Target 2K (20x)</button>
+                <button class="btn" style="font-size: 12px; padding: 6px; background: #28a745;" onclick="pilihTargetWd(25, 3000)">Target 3K (25x)</button>
+            </div>
+
+            <div id="areaKerjaMisi" style="display: none; margin-top: 10px;">
+                <p style="font-size: 13px; font-weight: bold; color: #333; margin-bottom: 5px;" id="txtProgressMisi">Progress: 0 / 10 Iklan</p>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn" style="background: #17a2b8; margin: 0; flex: 1;" onclick="nontonIklanMisi()">+ Nonton Iklan</button>
+                    <button class="btn" style="background: #dc3545; margin: 0; padding: 8px;" onclick="resetTargetWd()">Ganti Target</button>
+                </div>
+                <button class="btn" style="background: #28a745; display: none; margin-top: 8px;" id="btnKlaimWd" onclick="klaimWdTerpilih()">Klaim Hadiah WD Instan!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENU 3: UNDANG TEMAN -->
+    <div id="undang" class="page">
+        <div class="card">
+            <h3>Undang Teman</h3>
+            <p style="font-size: 13px; color: #555; line-height: 1.4; margin-bottom: 10px;">
+                Undang teman untuk bergabung dapatkan 250 poin. 250 poin akan disetorkan ketika teman anda menonton iklan 1x!
+            </p>
+            <label style="font-size: 12px; color: #666;">Link Referral Lu:</label>
+            <p style="font-size: 13px; word-break: break-all; color: #007bff; margin: 8px 0; background: #f8f9fa; padding: 8px; border-radius: 4px;" id="refLink">-</p>
+            <button class="btn" onclick="copyRef()">Salin Link Referral</button>
+        </div>
+    </div>
+
+    <!-- MENU 4: AKUN & PENARIKAN -->
+    <div id="akun" class="page">
+        <div class="card">
+            <h3>Pengaturan Rekening DANA</h3>
+            <label style="font-size: 12px;">Nomor HP DANA:</label>
+            <input type="number" id="inputNoDana" placeholder="Contoh: 08123456789">
+            
+            <label style="font-size: 12px;">Nama Akun DANA:</label>
+            <input type="text" id="inputNamaDana" placeholder="Nama sesuai DANA">
+            
+            <button class="btn" onclick="simpanAkun()">Simpan Rekening</button>
+        </div>
+
+        <div class="card">
+            <h3>Tarik Saldo (WD) Bebas</h3>
+            <p style="font-size: 11px; color: #666; margin-bottom: 8px;">Minimal penarikan Rp 2.000. Masukkan nominal bebas (tidak harus genap).</p>
+            <label style="font-size: 12px;">Jumlah Penarikan (Rp):</label>
+            <input type="number" id="inputJumlahWd" placeholder="Contoh: 2150">
+            <button class="btn" style="background: #28a745;" onclick="tarikDanaBebas()">Tarik Saldo Sekarang</button>
+        </div>
+        
+        <button class="btn" style="background: #dc3545; margin-top: 10px;" onclick="logout()">Keluar Akun</button>
+    </div>
+
+    <!-- 4 BAR MENU BAWAH -->
+    <nav class="bottom-nav" id="bottomNav">
+        <button class="nav-item" onclick="switchPage('beranda')"><div>🏠</div>Beranda</button>
+        <button class="nav-item" onclick="switchPage('misi')"><div>🎯</div>Misi</button>
+        <button class="nav-item" onclick="switchPage('undang')"><div>👥</div>Undang</button>
+        <button class="nav-item" onclick="switchPage('akun')"><div>⚙️</div>Akun</button>
+    </nav>
+
+    <script>
+        const SUPABASE_URL = 'https://hubhcrryalyjmldqilzo.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_J1IgVfRwNei2eWK61D2n2Q_W_lKq2663'; 
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = localStorage.getItem('mesin_uang_user') || null;
+        let userData = { 
+            saldo_rp: 0, 
+            poin_spin: 50, 
+            no_dana: '', 
+            nama_dana: '', 
+            target_nonton_aktif: null, 
+            nominal_wd_aktif: null,    
+            progress_nonton: 0,        
+            last_checkin: '' 
+        };
+
+        if (currentUser) {
+            bukaAplikasi();
+        }
+
+        document.getElementById('btnAuth').addEventListener('click', async function() {
+            let uName = document.getElementById('usernameInput').value.trim();
+            let pass = document.getElementById('passwordInput').value.trim();
+
+            if (!uName || !pass) {
+                alert("Username & password wajib diisi!");
+                return;
+            }
+
+            try {
+                let { data, error } = await supabase.from('users').select('*').eq('username', uName).maybeSingle();
+
+                if (error) {
+                    alert("Error database: " + error.message);
+                    return;
+                }
+
+                if (data) {
+                    if (data.password === pass || data.Password === pass) {
+                        currentUser = uName;
+                        userData = data;
+                        localStorage.setItem('mesin_uang_user', currentUser);
+                        alert("Berhasil masuk!");
+                        bukaAplikasi();
+                    } else {
+                        alert("Password salah, Bro!");
+                    }
+                } else {
+                    let { error: insertError } = await supabase.from('users').insert([
+                        { username: uName, password: pass, saldo_rp: 0, poin_spin: 50 }
+                    ]);
+
+                    if (insertError) {
+                        alert("Gagal daftar: " + insertError.message);
+                    } else {
+                        currentUser = uName;
+                        userData = { username: uName, password: pass, saldo_rp: 0, poin_spin: 50, no_dana: '', nama_dana: '' };
+                        localStorage.setItem('mesin_uang_user', currentUser);
+                        alert("Akun baru berhasil dibuat ke database!");
+                        bukaAplikasi();
+                    }
+                }
+            } catch (err) {
+                alert("Koneksi gagal: " + err.message);
+            }
+        });
+
+        async function syncKeDatabase() {
+            await supabase.from('users').update({
+                saldo_rp: userData.saldo_rp,
+                poin_spin: userData.poin_spin,
+                no_dana: userData.no_dana,
+                nama_dana: userData.nama_dana
+            }).eq('username', currentUser);
+        }
+
+        async function ambilDataUser() {
+            let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+            if (data) {
+                userData = data;
+                updateTampilan();
+            }
+        }
+
+        async function renderLeaderboard() {
+            let { data, error } = await supabase.from('users').select('username, saldo_rp').order('saldo_rp', { ascending: false }).limit(10);
+            
+            let html = '';
+            if (error || !data || data.length === 0) {
+                html = '<p style="font-size: 13px; color: #666;">Belum ada data leaderboard.</p>';
+            } else {
+                data.forEach((item, index) => {
+                    let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                    html += `<div class="leaderboard-item">
+                        <span>${medal} <strong>${item.username}</strong></span>
+                        <span style="color: #28a745; font-weight: bold;">Rp ${item.saldo_rp}</span>
+                    </div>`;
+                });
+            }
+            document.getElementById('leaderboardList').innerHTML = html;
+        }
+
+        function bukaAplikasi() {
+            document.getElementById('authPage').style.display = 'none';
+            document.getElementById('bottomNav').style.display = 'flex';
+            document.getElementById('userAktif').innerText = currentUser;
+            document.getElementById('refLink').innerText = `https://mesin-uang.web.app/?ref=${currentUser}`;
+            switchPage('beranda');
+            ambilDataUser();
+            renderLeaderboard();
+            cekTampilanMisiWd();
+        }
+
+        function logout() {
+            localStorage.removeItem('mesin_uang_user');
+            location.reload();
+        }
+
+        function switchPage(pageId) {
+            let pages = document.querySelectorAll('.page');
+            pages.forEach(p => p.classList.remove('active-page'));
+            document.getElementById(pageId).classList.add('active-page');
+            if(pageId === 'beranda') {
+                renderLeaderboard();
+            }
+        }
+
+        function updateTampilan() {
+            document.getElementById('txtPoin').innerText = (userData.poin_spin || 0) + " Poin";
+            document.getElementById('txtSaldo').innerText = "Rp " + (userData.saldo_rp || 0);
+            if(userData.no_dana) document.getElementById('inputNoDana').value = userData.no_dana;
+            if(userData.nama_dana) document.getElementById('inputNamaDana').value = userData.nama_dana;
+        }
+
+        // --- SISTEM MISI WD INSTAN ---
+        function pilihTargetWd(syarat, nominal) {
+            userData.target_nonton_aktif = syarat;
+            userData.nominal_wd_aktif = nominal;
+            userData.progress_nonton = 0;
+            cekTampilanMisiWd();
+            alert(`Berhasil memilih target WD Rp ${nominal.toLocaleString()} (${syarat}x nonton)!`);
+        }
+
+        function resetTargetWd() {
+            if(confirm("Yakin ingin mengganti target misi? Progress saat ini akan direset.")) {
+                userData.target_nonton_aktif = null;
+                userData.nominal_wd_aktif = null;
+                userData.progress_nonton = 0;
+                cekTampilanMisiWd();
+            }
+        }
+
+        function cekTampilanMisiWd() {
+            let pilihanBox = document.getElementById('pilihanTargetBox');
+            let areaKerja = document.getElementById('areaKerjaMisi');
+            let infoStatus = document.getElementById('infoTargetStatus');
+            let txtProgress = document.getElementById('txtProgressMisi');
+            let btnKlaim = document.getElementById('btnKlaimWd');
+
+            if(userData.target_nonton_aktif) {
+                pilihanBox.style.display = 'none';
+                areaKerja.style.display = 'block';
+                infoStatus.innerText = `Sedang Mengerjakan: Target WD Rp ${userData.nominal_wd_aktif.toLocaleString()}`;
+                txtProgress.innerText = `Progress: ${userData.progress_nonton} / ${userData.target_nonton_aktif} Iklan`;
+
+                if(userData.progress_nonton >= userData.target_nonton_aktif) {
+                    btnKlaim.style.display = 'block';
+                } else {
+                    btnKlaim.style.display = 'none';
+                }
+            } else {
+                pilihanBox.style.display = 'flex';
+                areaKerja.style.display = 'none';
+                infoStatus.innerText = "Pilih target misi WD instan yang ingin dikerjakan:";
+            }
+        }
+
+        function nontonIklanMisi() {
+            userData.progress_nonton += 1;
+            cekTampilanMisiWd();
+            alert(`📺 Nonton iklan sukses! (${userData.progress_nonton}/${userData.target_nonton_aktif})`);
+        }
+
+        async function klaimWdTerpilih() {
+            let nominal = userData.nominal_wd_aktif;
+            userData.saldo_rp = (userData.saldo_rp || 0) + nominal;
+            
+            userData.target_nonton_aktif = null;
+            userData.nominal_wd_aktif = null;
+            userData.progress_nonton = 0;
+
+            updateTampilan();
+            cekTampilanMisiWd();
+            await syncKeDatabase();
+            renderLeaderboard();
+            
+            alert(`🎉 HORE! Berhasil klaim WD Rp ${nominal.toLocaleString()}! Saldo tersimpan ke database.`);
+        }
+        // ------------------------------
+
+        // --- SPIN UTAMA ---
+        async function spinUtama() {
+            if ((userData.poin_spin || 0) < 10) {
+                alert("Poin Spin lu kurang! Yuk kumpulin poin lewat misi check-in.");
+                return;
+            }
+            userData.poin_spin -= 10;
+
+            let rand = Math.random() * 100;
+            let hasilKoin = 0;
+
+            if (rand < 94) {
+                hasilKoin = Math.floor(Math.random() * 21) + 100;
+            } else if (rand < 99) {
+                hasilKoin = Math.floor(Math.random() * 201) + 150;
+            } else if (rand < 99.9) {
+                hasilKoin = Math.floor(Math.random() * 301) + 500;
+            } else {
+                hasilKoin = Math.floor(Math.random() * 101) + 900;
+            }
+
+            userData.saldo_rp = (userData.saldo_rp || 0) + hasilKoin;
+            updateTampilan();
+            await syncKeDatabase();
+            renderLeaderboard();
+            
+            alert(`🎉 Spin Utama Selesai! Lu dapet ${hasilKoin} Koin.`);
+        }
+
+        // --- SPIN LITE ---
+        async function spinLite() {
+            let hadiah = Math.floor(Math.random() * 51) + 30;
+            userData.saldo_rp = (userData.saldo_rp || 0) + hadiah;
+            updateTampilan();
+            await syncKeDatabase();
+            renderLeaderboard();
+            alert(`📺 Nonton iklan Spin Lite sukses! Lu dapet ${hadiah} Koin.`);
+        }
+
+        async function klaimCheckin() {
+            let hariIni = new Date().toDateString();
+            if(userData.last_checkin === hariIni) {
+                alert("Lu sudah melakukan Check-in hari ini, Bro! Kembali lagi besok ya.");
+                return;
+            }
+            userData.last_checkin = hariIni;
+            userData.poin_spin = (userData.poin_spin || 50) + 50;
+            userData.saldo_rp = (userData.saldo_rp || 0) + 100;
+            
+            updateTampilan();
+            await syncKeDatabase();
+            renderLeaderboard();
+            alert("🎉 Check-in berhasil! Dapet 50 Poin & 100 Koin gratis.");
+        }
+
+        async function simpanAkun() {
+            let no = document.getElementById('inputNoDana').value;
+            let nama = document.getElementById('inputNamaDana').value;
+            if(!no || !nama) {
+                alert("Isi nomor dan nama DANA dengan benar!");
+                return;
+            }
+            userData.no_dana = no;
+            userData.nama_dana = nama;
+            
+            await syncKeDatabase();
+            alert("Rekening DANA berhasil disimpan ke database!");
+        }
+
+        async function tarikDanaBebas() {
+            let jumlah = parseInt(document.getElementById('inputJumlahWd').value);
+            if(!jumlah || jumlah < 2000) {
+                alert("Minimal penarikan adalah Rp 2.000, Bro!");
+                return;
+            }
+            if((userData.saldo_rp || 0) < jumlah) {
+                alert("Saldo Koin (Rp) lu nggak cukup buat ditarik sejumlah itu!");
+                return;
+            }
+            if(!userData.no_dana) {
+                alert("Harap isi dan simpan nomor rekening DANA lu dulu di menu akun!");
+                return;
+            }
+
+            userData.saldo_rp -= jumlah;
+            updateTampilan();
+            await syncKeDatabase();
+            renderLeaderboard();
+
+            await supabase.from('withdraw_requests').insert([
+                { username: currentUser, jumlah_wd: jumlah, no_dana: userData.no_dana, status: 'Pending' }
+            ]);
+
+            alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} ke nomor DANA (${userData.no_dana}) berhasil diproses!`);
+            document.getElementById('inputJumlahWd').value = '';
+        }
+
+        function copyRef() {
+            navigator.clipboard.writeText(document.getElementById('refLink').innerText);
+            alert("Link referral disalin ke clipboard!");
+        }
+    </script>
+</body>
+</html>
