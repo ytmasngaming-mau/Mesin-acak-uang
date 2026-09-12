@@ -181,20 +181,17 @@
             last_checkin: '' 
         };
 
-        async function initApp() {
-            if (currentUser) {
-                try {
-                    let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
-                    if (data) userData = data;
-                } catch(e) {
-                    console.log("Error fetch data");
-                }
+        // Cek login otomatis tanpa bikin layar putih
+        if (currentUser) {
+            supabase.from('users').select('*').eq('username', currentUser).maybeSingle().then(({ data }) => {
+                if (data) userData = data;
                 bukaAplikasi();
-            } else {
-                document.getElementById('authPage').style.display = 'flex';
-            }
+            }).catch(() => {
+                bukaAplikasi();
+            });
+        } else {
+            document.getElementById('authPage').style.display = 'flex';
         }
-        initApp();
 
         document.getElementById('btnAuth').addEventListener('click', async function() {
             let uName = document.getElementById('usernameInput').value.trim();
