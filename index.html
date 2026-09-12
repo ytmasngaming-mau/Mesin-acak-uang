@@ -7,18 +7,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background-color: #007bff; color: #333; padding-bottom: 70px; }
+        body { background-color: #f4f6f9; color: #333; padding-bottom: 70px; }
         
         header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; display: none; }
 
-        .page { display: none; padding: 15px; background: #f4f6f9; min-height: 100vh; }
+        .page { display: none; padding: 15px; min-height: 100vh; }
         .active-page { display: block; }
 
         #authPage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #007bff; display: flex; justify-content: center; align-items: center; z-index: 999;
+            background: #f4f6f9; display: flex; justify-content: center; align-items: center; z-index: 999;
         }
-        .auth-card { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .auth-card { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .auth-card h2 { margin-bottom: 15px; color: #007bff; }
 
         .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -184,7 +184,6 @@
             document.getElementById('authPage').style.display = 'flex';
         }
 
-        // Fungsi klik tombol login langsung menggunakan onclick HTML agar tidak nyangkut event listener
         async function prosesLogin() {
             let uName = document.getElementById('usernameInput').value.trim();
             let pass = document.getElementById('passwordInput').value.trim();
