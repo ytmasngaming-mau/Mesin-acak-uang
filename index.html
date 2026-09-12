@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mesin Acak Uang Online</title>
-    <!-- Panggil Library Supabase JS v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
@@ -26,7 +25,7 @@
         .card h3 { font-size: 14px; color: #666; margin-bottom: 5px; }
         .card p { font-size: 20px; font-weight: bold; color: #007bff; }
 
-        .btn { background: #007bff; color: white; border: none; padding: 10px 15px; width: 100%; border-radius: 5px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn { background: #007bff; color: white; border: none; padding: 12px 15px; width: 100%; border-radius: 5px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .mission-box { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
         .leaderboard-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
@@ -36,25 +35,23 @@
         .nav-item { color: white; text-align: center; font-size: 12px; cursor: pointer; flex: 1; background: none; border: none; }
         .nav-item div { font-size: 18px; margin-bottom: 2px; }
 
-        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <!-- HALAMAN LOGIN / DAFTAR -->
-    <div id="authPage" style="display: none;">
+    <div id="authPage">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Langsung ke Database</p>
             <input type="text" id="usernameInput" placeholder="Username">
             <input type="password" id="passwordInput" placeholder="Password">
-            <button class="btn" id="btnAuth">Masuk / Daftar</button>
+            <button class="btn" onclick="prosesLogin()">Masuk / Daftar</button>
         </div>
     </div>
 
     <header id="appHeader">Mesin Acak Uang</header>
 
-    <!-- MENU 1: BERANDA -->
     <div id="beranda" class="page">
         <div class="card">
             <h3>Halo, <span id="userAktif" style="color:#007bff;">Guest</span></h3>
@@ -69,14 +66,12 @@
             <p id="txtPoin" style="color: #28a745;">0 Poin</p>
         </div>
         
-        <!-- LEADERBOARD TOP 10 -->
         <div class="card">
             <h3>🏆 Top 10 Penghasilan Terbanyak</h3>
             <div id="leaderboardList" style="margin-top: 10px;">Memuat data...</div>
         </div>
     </div>
 
-    <!-- MENU 2: MISI -->
     <div id="misi" class="page">
         <h3 style="margin-bottom: 10px;">Daftar Misi Cuan</h3>
         
@@ -103,9 +98,9 @@
             <p style="font-size: 12px; color: #666; margin: 3px 0;" id="infoTargetStatus">Pilih target misi WD instan yang ingin dikerjakan:</p>
             
             <div id="pilihanTargetBox" style="display: flex; gap: 5px; margin-top: 8px;">
-                <button class="btn" style="font-size: 12px; padding: 6px; background: #007bff;" onclick="pilihTargetWd(10, 1000)">Target 1K (10x)</button>
-                <button class="btn" style="font-size: 12px; padding: 6px; background: #e0a800;" onclick="pilihTargetWd(20, 2000)">Target 2K (20x)</button>
-                <button class="btn" style="font-size: 12px; padding: 6px; background: #28a745;" onclick="pilihTargetWd(25, 3000)">Target 3K (25x)</button>
+                <button class="btn" style="font-size: 12px; padding: 8px; background: #007bff;" onclick="pilihTargetWd(10, 1000)">Target 1K (10x)</button>
+                <button class="btn" style="font-size: 12px; padding: 8px; background: #e0a800;" onclick="pilihTargetWd(20, 2000)">Target 2K (20x)</button>
+                <button class="btn" style="font-size: 12px; padding: 8px; background: #28a745;" onclick="pilihTargetWd(25, 3000)">Target 3K (25x)</button>
             </div>
 
             <div id="areaKerjaMisi" style="display: none; margin-top: 10px;">
@@ -119,7 +114,6 @@
         </div>
     </div>
 
-    <!-- MENU 3: UNDANG TEMAN -->
     <div id="undang" class="page">
         <div class="card">
             <h3>Undang Teman</h3>
@@ -132,7 +126,6 @@
         </div>
     </div>
 
-    <!-- MENU 4: AKUN & PENARIKAN -->
     <div id="akun" class="page">
         <div class="card">
             <h3>Pengaturan Rekening DANA</h3>
@@ -154,7 +147,6 @@
         <button class="btn" style="background: #dc3545; margin-top: 10px;" onclick="logout()">Keluar Akun</button>
     </div>
 
-    <!-- 4 BAR MENU BAWAH -->
     <nav class="bottom-nav" id="bottomNav">
         <button class="nav-item" onclick="switchPage('beranda')"><div>🏠</div>Beranda</button>
         <button class="nav-item" onclick="switchPage('misi')"><div>🎯</div>Misi</button>
@@ -180,21 +172,20 @@
             last_checkin: '' 
         };
 
-        // Eksekusi awal yang aman
-        async function initApp() {
-            if (currentUser) {
-                try {
-                    let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
-                    if (data) userData = data;
-                } catch(e) {}
+        // Cek login otomatis saat halaman dimuat
+        if (currentUser) {
+            supabase.from('users').select('*').eq('username', currentUser).maybeSingle().then(({ data }) => {
+                if (data) userData = data;
                 bukaAplikasi();
-            } else {
-                document.getElementById('authPage').style.display = 'flex';
-            }
+            }).catch(() => {
+                bukaAplikasi();
+            });
+        } else {
+            document.getElementById('authPage').style.display = 'flex';
         }
-        initApp();
 
-        document.getElementById('btnAuth').addEventListener('click', async function() {
+        // Fungsi klik tombol login langsung menggunakan onclick HTML agar tidak nyangkut event listener
+        async function prosesLogin() {
             let uName = document.getElementById('usernameInput').value.trim();
             let pass = document.getElementById('passwordInput').value.trim();
 
@@ -212,7 +203,6 @@
                 }
 
                 if (data) {
-                    // Cek properti huruf kecil atau besar pada kolom password database
                     let dbPass = data.password !== undefined ? data.password : data.Password;
                     if (dbPass === pass) {
                         currentUser = uName;
@@ -239,7 +229,7 @@
             } catch (err) {
                 alert("Koneksi gagal: " + err.message);
             }
-        });
+        }
 
         async function syncKeDatabase() {
             try {
@@ -455,7 +445,7 @@
                 ]);
             } catch(e) {}
 
-            alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} berhasil proses!`);
+            alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} berhasil diproses!`);
             document.getElementById('inputJumlahWd').value = '';
         }
 
