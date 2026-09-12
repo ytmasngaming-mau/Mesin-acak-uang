@@ -8,11 +8,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background-color: #f4f6f9; color: #333; padding-bottom: 70px; }
+        body { background-color: #007bff; color: #333; padding-bottom: 70px; }
         
-        header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; }
+        header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; display: none; }
 
-        .page { display: none; padding: 15px; }
+        .page { display: none; padding: 15px; background: #f4f6f9; min-height: 100vh; }
         .active-page { display: block; }
 
         #authPage {
@@ -27,7 +27,6 @@
         .card p { font-size: 20px; font-weight: bold; color: #007bff; }
 
         .btn { background: #007bff; color: white; border: none; padding: 10px 15px; width: 100%; border-radius: 5px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn:active { background: #0056b3; }
         .mission-box { background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
         .leaderboard-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
@@ -43,7 +42,7 @@
 <body>
 
     <!-- HALAMAN LOGIN / DAFTAR -->
-    <div id="authPage">
+    <div id="authPage" style="display: none;">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Langsung ke Database</p>
@@ -53,7 +52,7 @@
         </div>
     </div>
 
-    <header>Mesin Acak Uang</header>
+    <header id="appHeader">Mesin Acak Uang</header>
 
     <!-- MENU 1: BERANDA -->
     <div id="beranda" class="page">
@@ -181,17 +180,19 @@
             last_checkin: '' 
         };
 
-        // Cek login otomatis tanpa bikin layar putih
-        if (currentUser) {
-            supabase.from('users').select('*').eq('username', currentUser).maybeSingle().then(({ data }) => {
-                if (data) userData = data;
+        // Eksekusi awal yang aman
+        async function initApp() {
+            if (currentUser) {
+                try {
+                    let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+                    if (data) userData = data;
+                } catch(e) {}
                 bukaAplikasi();
-            }).catch(() => {
-                bukaAplikasi();
-            });
-        } else {
-            document.getElementById('authPage').style.display = 'flex';
+            } else {
+                document.getElementById('authPage').style.display = 'flex';
+            }
         }
+        initApp();
 
         document.getElementById('btnAuth').addEventListener('click', async function() {
             let uName = document.getElementById('usernameInput').value.trim();
@@ -211,7 +212,9 @@
                 }
 
                 if (data) {
-                    if (data.password === pass || data.Password === pass) {
+                    // Cek properti huruf kecil atau besar pada kolom password database
+                    let dbPass = data.password !== undefined ? data.password : data.Password;
+                    if (dbPass === pass) {
                         currentUser = uName;
                         userData = data;
                         localStorage.setItem('mesin_uang_user', currentUser);
@@ -270,6 +273,7 @@
 
         function bukaAplikasi() {
             document.getElementById('authPage').style.display = 'none';
+            document.getElementById('appHeader').style.display = 'block';
             document.getElementById('bottomNav').style.display = 'flex';
             document.getElementById('userAktif').innerText = currentUser;
             document.getElementById('refLink').innerText = `https://ytmasngaming-mau.github.io/mesin-acak-uang/?ref=${currentUser}`;
@@ -451,7 +455,7 @@
                 ]);
             } catch(e) {}
 
-            alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} berhasil diproses!`);
+            alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} berhasil proses!`);
             document.getElementById('inputJumlahWd').value = '';
         }
 
