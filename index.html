@@ -43,7 +43,7 @@
 <body>
 
     <!-- HALAMAN LOGIN / DAFTAR -->
-    <div id="authPage" style="display: none;">
+    <div id="authPage">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Langsung ke Database</p>
@@ -183,8 +183,12 @@
 
         async function initApp() {
             if (currentUser) {
-                let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
-                if (data) userData = data;
+                try {
+                    let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+                    if (data) userData = data;
+                } catch(e) {
+                    console.log("Error fetch data");
+                }
                 bukaAplikasi();
             } else {
                 document.getElementById('authPage').style.display = 'flex';
@@ -238,29 +242,33 @@
         });
 
         async function syncKeDatabase() {
-            await supabase.from('users').update({
-                saldo_rp: userData.saldo_rp,
-                poin_spin: userData.poin_spin,
-                no_dana: userData.no_dana,
-                nama_dana: userData.nama_dana
-            }).eq('username', currentUser);
+            try {
+                await supabase.from('users').update({
+                    saldo_rp: userData.saldo_rp,
+                    poin_spin: userData.poin_spin,
+                    no_dana: userData.no_dana,
+                    nama_dana: userData.nama_dana
+                }).eq('username', currentUser);
+            } catch(e) {}
         }
 
         async function renderLeaderboard() {
-            let { data, error } = await supabase.from('users').select('username, saldo_rp').order('saldo_rp', { ascending: false }).limit(10);
-            let html = '';
-            if (error || !data || data.length === 0) {
-                html = '<p style="font-size: 13px; color: #666;">Belum ada data leaderboard.</p>';
-            } else {
-                data.forEach((item, index) => {
-                    let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
-                    html += `<div class="leaderboard-item">
-                        <span>${medal} <strong>${item.username}</strong></span>
-                        <span style="color: #28a745; font-weight: bold;">Rp ${item.saldo_rp}</span>
-                    </div>`;
-                });
-            }
-            document.getElementById('leaderboardList').innerHTML = html;
+            try {
+                let { data, error } = await supabase.from('users').select('username, saldo_rp').order('saldo_rp', { ascending: false }).limit(10);
+                let html = '';
+                if (error || !data || data.length === 0) {
+                    html = '<p style="font-size: 13px; color: #666;">Belum ada data leaderboard.</p>';
+                } else {
+                    data.forEach((item, index) => {
+                        let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                        html += `<div class="leaderboard-item">
+                            <span>${medal} <strong>${item.username}</strong></span>
+                            <span style="color: #28a745; font-weight: bold;">Rp ${item.saldo_rp}</span>
+                        </div>`;
+                    });
+                }
+                document.getElementById('leaderboardList').innerHTML = html;
+            } catch(e) {}
         }
 
         function bukaAplikasi() {
@@ -408,7 +416,6 @@
         }
 
         async function simpanAkun() {
-            let username = document.getElementById('inputUsername')?.value || currentUser;
             let no = document.getElementById('inputNoDana').value;
             let nama = document.getElementById('inputNamaDana').value;
             if(!no || !nama) {
@@ -441,9 +448,11 @@
             await syncKeDatabase();
             renderLeaderboard();
 
-            await supabase.from('withdraw_requests').insert([
-                { username: currentUser, jumlah_wd: jumlah, no_dana: userData.no_dana, status: 'Pending' }
-            ]);
+            try {
+                await supabase.from('withdraw_requests').insert([
+                    { username: currentUser, jumlah_wd: jumlah, no_dana: userData.no_dana, status: 'Pending' }
+                ]);
+            } catch(e) {}
 
             alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} berhasil diproses!`);
             document.getElementById('inputJumlahWd').value = '';
