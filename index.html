@@ -33,24 +33,32 @@
         .leaderboard-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
         .leaderboard-item:last-child { border-bottom: none; }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #007bff; display: none; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #007bff; display: none; justify-content: space-around; padding: 10px 0; box-shadow: -2px 5px rgba(0,0,0,0.1); z-index: 99; }
         .nav-item { color: white; text-align: center; font-size: 12px; cursor: pointer; flex: 1; background: none; border: none; }
         .nav-item div { font-size: 18px; margin-bottom: 2px; }
 
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; }
+
+        /* Layar Loading Sementara Agar Tidak Kedip */
+        #loadingScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #f4f6f9; display: flex; justify-content: center; align-items: center;
+            font-size: 16px; color: #007bff; font-weight: bold; z-index: 9999;
+        }
     </style>
 </head>
 <body>
 
+    <!-- LOADING SCREEN ANTI-KEDIP -->
+    <div id="loadingScreen">Menyiapkan Aplikasi...</div>
+
     <!-- HALAMAN LOGIN / DAFTAR -->
-    <div id="authPage">
+    <div id="authPage" style="display: none;">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
             <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Langsung ke Database</p>
-            
             <input type="text" id="usernameInput" placeholder="Username">
             <input type="password" id="passwordInput" placeholder="Password">
-            
             <button class="btn" id="btnAuth">Masuk / Daftar</button>
         </div>
     </div>
@@ -69,7 +77,7 @@
         </div>
         <div class="card">
             <h3>Poin Spin (Modal Main)</h3>
-            <p id="txtPoin" style="color: #28a745;">50 Poin</p>
+            <p id="txtPoin" style="color: #28a745;">0 Poin</p>
         </div>
         
         <!-- LEADERBOARD TOP 10 -->
@@ -83,28 +91,24 @@
     <div id="misi" class="page">
         <h3 style="margin-bottom: 10px;">Daftar Misi Cuan</h3>
         
-        <!-- CHECK-IN -->
         <div class="mission-box">
             <strong>Check-in Harian</strong>
             <p style="font-size: 12px; color: #666; margin: 3px 0;">Klaim hadiah harian 50 Poin & 100 Koin gratis!</p>
             <button class="btn" onclick="klaimCheckin()">Check-in Sekarang</button>
         </div>
 
-        <!-- SPIN UTAMA -->
         <div class="mission-box">
             <strong>Spin Wheel Utama</strong>
             <p style="font-size: 12px; color: #666; margin: 3px 0;">Modal 10 Poin | Hadiah 100-1000 Koin (Sangat Susah!)</p>
             <button class="btn" onclick="spinUtama()">Main Spin</button>
         </div>
 
-        <!-- SPIN WHEEL LITE -->
         <div class="mission-box">
             <strong>Spin Wheel Lite (Nonton Iklan)</strong>
             <p style="font-size: 12px; color: #666; margin: 3px 0;">Nonton iklan biasa | Hadiah 30-80 Koin</p>
             <button class="btn" onclick="spinLite()">Nonton Iklan Lite</button>
         </div>
 
-        <!-- MISI WD INSTAN (PILIH TARGET) -->
         <div class="mission-box" style="border-left: 4px solid #ffc107;">
             <strong>Misi WD Instan Target Iklan</strong>
             <p style="font-size: 12px; color: #666; margin: 3px 0;" id="infoTargetStatus">Pilih target misi WD instan yang ingin dikerjakan:</p>
@@ -145,16 +149,14 @@
             <h3>Pengaturan Rekening DANA</h3>
             <label style="font-size: 12px;">Nomor HP DANA:</label>
             <input type="number" id="inputNoDana" placeholder="Contoh: 08123456789">
-            
             <label style="font-size: 12px;">Nama Akun DANA:</label>
             <input type="text" id="inputNamaDana" placeholder="Nama sesuai DANA">
-            
             <button class="btn" onclick="simpanAkun()">Simpan Rekening</button>
         </div>
 
         <div class="card">
             <h3>Tarik Saldo (WD) Bebas</h3>
-            <p style="font-size: 11px; color: #666; margin-bottom: 8px;">Minimal penarikan Rp 2.000. Masukkan nominal bebas (tidak harus genap).</p>
+            <p style="font-size: 11px; color: #666; margin-bottom: 8px;">Minimal penarikan Rp 2.000. Masukkan nominal bebas.</p>
             <label style="font-size: 12px;">Jumlah Penarikan (Rp):</label>
             <input type="number" id="inputJumlahWd" placeholder="Contoh: 2150">
             <button class="btn" style="background: #28a745;" onclick="tarikDanaBebas()">Tarik Saldo Sekarang</button>
@@ -189,8 +191,23 @@
             last_checkin: '' 
         };
 
-        if (currentUser) {
-            bukaAplikasi();
+        // Jalankan pengecekan awal secara instan di latar belakang sebelum layar dibuka
+        async function initApp() {
+            if (currentUser) {
+                await ambilDataUserSilent();
+                bukaAplikasi();
+            } else {
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('authPage').style.display = 'flex';
+            }
+        }
+        initApp();
+
+        async function ambilDataUserSilent() {
+            let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+            if (data) {
+                userData = data;
+            }
         }
 
         document.getElementById('btnAuth').addEventListener('click', async function() {
@@ -215,7 +232,6 @@
                         currentUser = uName;
                         userData = data;
                         localStorage.setItem('mesin_uang_user', currentUser);
-                        alert("Berhasil masuk!");
                         bukaAplikasi();
                     } else {
                         alert("Password salah, Bro!");
@@ -231,7 +247,6 @@
                         currentUser = uName;
                         userData = { username: uName, password: pass, saldo_rp: 0, poin_spin: 50, no_dana: '', nama_dana: '' };
                         localStorage.setItem('mesin_uang_user', currentUser);
-                        alert("Akun baru berhasil dibuat ke database!");
                         bukaAplikasi();
                     }
                 }
@@ -249,17 +264,8 @@
             }).eq('username', currentUser);
         }
 
-        async function ambilDataUser() {
-            let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
-            if (data) {
-                userData = data;
-                updateTampilan();
-            }
-        }
-
         async function renderLeaderboard() {
             let { data, error } = await supabase.from('users').select('username, saldo_rp').order('saldo_rp', { ascending: false }).limit(10);
-            
             let html = '';
             if (error || !data || data.length === 0) {
                 html = '<p style="font-size: 13px; color: #666;">Belum ada data leaderboard.</p>';
@@ -276,12 +282,14 @@
         }
 
         function bukaAplikasi() {
+            document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('authPage').style.display = 'none';
             document.getElementById('bottomNav').style.display = 'flex';
             document.getElementById('userAktif').innerText = currentUser;
-            document.getElementById('refLink').innerText = `https://mesin-uang.web.app/?ref=${currentUser}`;
+            document.getElementById('refLink').innerText = `https://ytmasngaming-mau.github.io/mesin-acak-uang/?ref=${currentUser}`;
+            
+            updateTampilan();
             switchPage('beranda');
-            ambilDataUser();
             renderLeaderboard();
             cekTampilanMisiWd();
         }
@@ -307,7 +315,6 @@
             if(userData.nama_dana) document.getElementById('inputNamaDana').value = userData.nama_dana;
         }
 
-        // --- SISTEM MISI WD INSTAN ---
         function pilihTargetWd(syarat, nominal) {
             userData.target_nonton_aktif = syarat;
             userData.nominal_wd_aktif = nominal;
@@ -337,7 +344,6 @@
                 areaKerja.style.display = 'block';
                 infoStatus.innerText = `Sedang Mengerjakan: Target WD Rp ${userData.nominal_wd_aktif.toLocaleString()}`;
                 txtProgress.innerText = `Progress: ${userData.progress_nonton} / ${userData.target_nonton_aktif} Iklan`;
-
                 if(userData.progress_nonton >= userData.target_nonton_aktif) {
                     btnKlaim.style.display = 'block';
                 } else {
@@ -359,7 +365,6 @@
         async function klaimWdTerpilih() {
             let nominal = userData.nominal_wd_aktif;
             userData.saldo_rp = (userData.saldo_rp || 0) + nominal;
-            
             userData.target_nonton_aktif = null;
             userData.nominal_wd_aktif = null;
             userData.progress_nonton = 0;
@@ -368,22 +373,17 @@
             cekTampilanMisiWd();
             await syncKeDatabase();
             renderLeaderboard();
-            
-            alert(`🎉 HORE! Berhasil klaim WD Rp ${nominal.toLocaleString()}! Saldo tersimpan ke database.`);
+            alert(`🎉 HORE! Berhasil klaim WD Rp ${nominal.toLocaleString()}!`);
         }
-        // ------------------------------
 
-        // --- SPIN UTAMA ---
         async function spinUtama() {
             if ((userData.poin_spin || 0) < 10) {
                 alert("Poin Spin lu kurang! Yuk kumpulin poin lewat misi check-in.");
                 return;
             }
             userData.poin_spin -= 10;
-
             let rand = Math.random() * 100;
             let hasilKoin = 0;
-
             if (rand < 94) {
                 hasilKoin = Math.floor(Math.random() * 21) + 100;
             } else if (rand < 99) {
@@ -398,11 +398,9 @@
             updateTampilan();
             await syncKeDatabase();
             renderLeaderboard();
-            
             alert(`🎉 Spin Utama Selesai! Lu dapet ${hasilKoin} Koin.`);
         }
 
-        // --- SPIN LITE ---
         async function spinLite() {
             let hadiah = Math.floor(Math.random() * 51) + 30;
             userData.saldo_rp = (userData.saldo_rp || 0) + hadiah;
@@ -415,7 +413,7 @@
         async function klaimCheckin() {
             let hariIni = new Date().toDateString();
             if(userData.last_checkin === hariIni) {
-                alert("Lu sudah melakukan Check-in hari ini, Bro! Kembali lagi besok ya.");
+                alert("Lu sudah melakukan Check-in hari ini, Bro!");
                 return;
             }
             userData.last_checkin = hariIni;
@@ -437,9 +435,8 @@
             }
             userData.no_dana = no;
             userData.nama_dana = nama;
-            
             await syncKeDatabase();
-            alert("Rekening DANA berhasil disimpan ke database!");
+            alert("Rekening DANA berhasil disimpan!");
         }
 
         async function tarikDanaBebas() {
@@ -449,7 +446,7 @@
                 return;
             }
             if((userData.saldo_rp || 0) < jumlah) {
-                alert("Saldo Koin (Rp) lu nggak cukup buat ditarik sejumlah itu!");
+                alert("Saldo Koin (Rp) lu nggak cukup!");
                 return;
             }
             if(!userData.no_dana) {
@@ -466,7 +463,7 @@
                 { username: currentUser, jumlah_wd: jumlah, no_dana: userData.no_dana, status: 'Pending' }
             ]);
 
-            alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} ke nomor DANA (${userData.no_dana}) berhasil diproses!`);
+            alert(`✨ Penarikan sebesar Rp ${jumlah.toLocaleString()} berhasil diproses!`);
             document.getElementById('inputJumlahWd').value = '';
         }
 
