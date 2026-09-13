@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mesin Acak Uang Online</title>
+    <!-- Panggil Library Supabase JS v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
@@ -40,18 +41,20 @@
 </head>
 <body>
 
+    <!-- HALAMAN LOGIN / DAFTAR -->
     <div id="authPage">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Langsung ke Database</p>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Online</p>
             <input type="text" id="usernameInput" placeholder="Username">
             <input type="password" id="passwordInput" placeholder="Password">
-            <button class="btn" id="btnAuth">Masuk / Daftar</button>
+            <button class="btn" onclick="prosesLoginDaftar()">Masuk / Daftar</button>
         </div>
     </div>
 
     <header id="appHeader">Mesin Acak Uang</header>
 
+    <!-- MENU 1: BERANDA -->
     <div id="beranda" class="page">
         <div class="card">
             <h3>Halo, <span id="userAktif" style="color:#007bff;">Guest</span></h3>
@@ -66,12 +69,14 @@
             <p id="txtPoin" style="color: #28a745;">0 Poin</p>
         </div>
         
+        <!-- LEADERBOARD TOP 10 -->
         <div class="card">
             <h3>🏆 Top 10 Penghasilan Terbanyak</h3>
             <div id="leaderboardList" style="margin-top: 10px;">Memuat data...</div>
         </div>
     </div>
 
+    <!-- MENU 2: MISI -->
     <div id="misi" class="page">
         <h3 style="margin-bottom: 10px;">Daftar Misi Cuan</h3>
         
@@ -114,6 +119,7 @@
         </div>
     </div>
 
+    <!-- MENU 3: UNDANG TEMAN -->
     <div id="undang" class="page">
         <div class="card">
             <h3>Undang Teman</h3>
@@ -126,6 +132,7 @@
         </div>
     </div>
 
+    <!-- MENU 4: AKUN & PENARIKAN -->
     <div id="akun" class="page">
         <div class="card">
             <h3>Pengaturan Rekening DANA</h3>
@@ -147,6 +154,7 @@
         <button class="btn" style="background: #dc3545; margin-top: 10px;" onclick="logout()">Keluar Akun</button>
     </div>
 
+    <!-- 4 BAR MENU BAWAH -->
     <nav class="bottom-nav" id="bottomNav">
         <button class="nav-item" onclick="switchPage('beranda')"><div>🏠</div>Beranda</button>
         <button class="nav-item" onclick="switchPage('misi')"><div>🎯</div>Misi</button>
@@ -158,7 +166,10 @@
         const SUPABASE_URL = 'https://hubhcrryalyjmldqilzo.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_J1IgVfRwNei2eWK61D2n2Q_W_lKq2663'; 
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabase = null;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (e) {}
 
         let currentUser = localStorage.getItem('mesin_uang_user') || null;
         let userData = { 
@@ -173,17 +184,21 @@
         };
 
         if (currentUser) {
-            supabase.from('users').select('*').eq('username', currentUser).maybeSingle().then(({ data }) => {
-                if (data) userData = data;
-                bukaAplikasi();
-            }).catch(() => {
-                bukaAplikasi();
-            });
+            bukaAplikasi();
+            if (supabase) {
+                supabase.from('users').select('*').eq('username', currentUser).maybeSingle().then(({ data }) => {
+                    if (data) {
+                        userData = data;
+                        updateTampilan();
+                    }
+                }).catch(() => {});
+            }
         } else {
             document.getElementById('authPage').style.display = 'flex';
         }
 
-        document.getElementById('btnAuth').addEventListener('click', async function() {
+        // Fungsi Tombol Langsung Inline onclick (Supaya Anti-Macet di HP Online)
+        async function prosesLoginDaftar() {
             let uName = document.getElementById('usernameInput').value.trim();
             let pass = document.getElementById('passwordInput').value.trim();
 
@@ -192,13 +207,13 @@
                 return;
             }
 
+            if (!supabase) {
+                alert("Koneksi Supabase belum siap.");
+                return;
+            }
+
             try {
                 let { data, error } = await supabase.from('users').select('*').eq('username', uName).maybeSingle();
-
-                if (error) {
-                    alert("Error database: " + error.message);
-                    return;
-                }
 
                 if (data) {
                     let dbPass = data.password !== undefined ? data.password : data.Password;
@@ -221,15 +236,17 @@
                         currentUser = uName;
                         userData = { username: uName, password: pass, saldo_rp: 0, poin_spin: 50, no_dana: '', nama_dana: '' };
                         localStorage.setItem('mesin_uang_user', currentUser);
+                        alert("Pendaftaran berhasil! Klik OK untuk masuk.");
                         bukaAplikasi();
                     }
                 }
             } catch (err) {
-                alert("Koneksi gagal: " + err.message);
+                alert("Terjadi kendala jaringan: " + err.message);
             }
-        });
+        }
 
         async function syncKeDatabase() {
+            if(!supabase || !currentUser) return;
             try {
                 await supabase.from('users').update({
                     saldo_rp: userData.saldo_rp,
@@ -241,6 +258,7 @@
         }
 
         async function renderLeaderboard() {
+            if(!supabase) return;
             try {
                 let { data, error } = await supabase.from('users').select('username, saldo_rp').order('saldo_rp', { ascending: false }).limit(10);
                 let html = '';
