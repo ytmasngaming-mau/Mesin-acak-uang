@@ -20,7 +20,8 @@
             background: #f4f6f9; display: flex; justify-content: center; align-items: center; z-index: 999;
         }
         .auth-card { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .auth-card h2 { margin-bottom: 15px; color: #007bff; }
+        .auth-card h2 { margin-bottom: 10px; color: #007bff; }
+        .auth-card p { font-size: 12px; color: #666; margin-bottom: 15px; }
 
         .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .card h3 { font-size: 14px; color: #666; margin-bottom: 5px; }
@@ -41,14 +42,15 @@
 </head>
 <body>
 
-    <!-- HALAMAN LOGIN / DAFTAR -->
+    <!-- HALAMAN LOGIN / DAFTAR EMAIL -->
     <div id="authPage">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Login / Daftar Online</p>
-            <input type="text" id="usernameInput" placeholder="Username">
-            <input type="password" id="passwordInput" placeholder="Password">
-            <button class="btn" onclick="prosesLoginDaftar()">Masuk / Daftar</button>
+            <p>Masukkan Email & Sandi. Verifikasi email akan dikirim otomatis!</p>
+            <input type="email" id="emailInput" placeholder="Email aktif (Contoh: user@gmail.com)">
+            <input type="password" id="passwordInput" placeholder="Password (Minimal 6 karakter)">
+            <button class="btn" onclick="loginEmail()">Masuk</button>
+            <button class="btn" style="background: #28a745;" onclick="daftarEmail()">Daftar Akun Baru</button>
         </div>
     </div>
 
@@ -58,7 +60,7 @@
     <div id="beranda" class="page">
         <div class="card">
             <h3>Halo, <span id="userAktif" style="color:#007bff;">Guest</span></h3>
-            <p style="font-size: 12px; color: #28a745; margin-top: 2px;">● Terhubung ke Supabase Online</p>
+            <p style="font-size: 12px; color: #28a745; margin-top: 2px;">● Terverifikasi Supabase Auth</p>
         </div>
         <div class="card">
             <h3>Saldo Koin (Rupiah)</h3>
@@ -166,12 +168,9 @@
         const SUPABASE_URL = 'https://hubhcrryalyjmldqilzo.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_J1IgVfRwNei2eWK61D2n2Q_W_lKq2663'; 
 
-        let supabase = null;
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (e) {}
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let currentUser = localStorage.getItem('mesin_uang_user') || null;
+        let currentUser = null;
         let userData = { 
             saldo_rp: 0, 
             poin_spin: 50, 
@@ -183,70 +182,79 @@
             last_checkin: '' 
         };
 
-        if (currentUser) {
-            bukaAplikasi();
-            if (supabase) {
-                supabase.from('users').select('*').eq('username', currentUser).maybeSingle().then(({ data }) => {
-                    if (data) {
-                        userData = data;
-                        updateTampilan();
-                    }
-                }).catch(() => {});
+        // Cek sesi login otomatis Supabase Auth
+        async function cekSesiAuth() {
+            let { data: { session } } = await supabase.auth.getSession();
+            if (session && session.user) {
+                currentUser = session.user.email.split('@')[0];
+                
+                // Ambil atau buat data user di tabel database 'users'
+                let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+                if (data) {
+                    userData = data;
+                } else {
+                    await supabase.from('users').insert([
+                        { username: currentUser, saldo_rp: 0, poin_spin: 50 }
+                    ]);
+                    let { data: newData } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+                    if(newData) userData = newData;
+                }
+                bukaAplikasi();
+            } else {
+                document.getElementById('authPage').style.display = 'flex';
             }
-        } else {
-            document.getElementById('authPage').style.display = 'flex';
+        }
+        cekSesiAuth();
+
+        // Fungsi Daftar Akun (Otomatis Kirim Email Verifikasi dari Supabase)
+        async function daftarEmail() {
+            let email = document.getElementById('emailInput').value.trim();
+            let password = document.getElementById('passwordInput').value.trim();
+
+            if (!email || !password) {
+                alert("Email dan password wajib diisi!");
+                return;
+            }
+
+            let { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    emailRedirectTo: window.location.origin + window.location.pathname
+                }
+            });
+
+            if (error) {
+                alert("Gagal daftar: " + error.message);
+            } else {
+                alert("Pendaftaran berhasil! Cek kotak masuk (Inbox/Spam) email Gmail lu untuk klik link verifikasi sebelum login.");
+            }
         }
 
-        // Fungsi Tombol Langsung Inline onclick (Supaya Anti-Macet di HP Online)
-        async function prosesLoginDaftar() {
-            let uName = document.getElementById('usernameInput').value.trim();
-            let pass = document.getElementById('passwordInput').value.trim();
+        // Fungsi Login Email
+        async function loginEmail() {
+            let email = document.getElementById('emailInput').value.trim();
+            let password = document.getElementById('passwordInput').value.trim();
 
-            if (!uName || !pass) {
-                alert("Username & password wajib diisi!");
+            if (!email || !password) {
+                alert("Email dan password wajib diisi!");
                 return;
             }
 
-            if (!supabase) {
-                alert("Koneksi Supabase belum siap.");
-                return;
-            }
+            let { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
 
-            try {
-                let { data, error } = await supabase.from('users').select('*').eq('username', uName).maybeSingle();
-
-                if (data) {
-                    let dbPass = data.password !== undefined ? data.password : data.Password;
-                    if (dbPass === pass) {
-                        currentUser = uName;
-                        userData = data;
-                        localStorage.setItem('mesin_uang_user', currentUser);
-                        bukaAplikasi();
-                    } else {
-                        alert("Password salah, Bro!");
-                    }
-                } else {
-                    let { error: insertError } = await supabase.from('users').insert([
-                        { username: uName, password: pass, saldo_rp: 0, poin_spin: 50 }
-                    ]);
-
-                    if (insertError) {
-                        alert("Gagal daftar: " + insertError.message);
-                    } else {
-                        currentUser = uName;
-                        userData = { username: uName, password: pass, saldo_rp: 0, poin_spin: 50, no_dana: '', nama_dana: '' };
-                        localStorage.setItem('mesin_uang_user', currentUser);
-                        alert("Pendaftaran berhasil! Klik OK untuk masuk.");
-                        bukaAplikasi();
-                    }
-                }
-            } catch (err) {
-                alert("Terjadi kendala jaringan: " + err.message);
+            if (error) {
+                alert("Gagal masuk: " + error.message + "\n(Pastikan email sudah diverifikasi lewat link di Gmail!)");
+            } else {
+                location.reload();
             }
         }
 
         async function syncKeDatabase() {
-            if(!supabase || !currentUser) return;
+            if(!currentUser) return;
             try {
                 await supabase.from('users').update({
                     saldo_rp: userData.saldo_rp,
@@ -258,7 +266,6 @@
         }
 
         async function renderLeaderboard() {
-            if(!supabase) return;
             try {
                 let { data, error } = await supabase.from('users').select('username, saldo_rp').order('saldo_rp', { ascending: false }).limit(10);
                 let html = '';
@@ -290,8 +297,8 @@
             cekTampilanMisiWd();
         }
 
-        function logout() {
-            localStorage.removeItem('mesin_uang_user');
+        async function logout() {
+            await supabase.auth.signOut();
             location.reload();
         }
 
