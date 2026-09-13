@@ -8,18 +8,17 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background-color: #f4f6f9; color: #333; padding-bottom: 70px; }
+        body { background-color: #f4f6f9; color: #333; padding: 20px; padding-bottom: 70px; }
         
-        header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; display: none; }
+        header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; display: none; border-radius: 5px; margin-bottom: 15px; }
 
-        .page { display: none; padding: 15px; min-height: 100vh; }
+        .page { display: none; min-height: 80vh; }
         .active-page { display: block; }
 
         #authPage {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #f4f6f9; display: flex; justify-content: center; align-items: center; z-index: 999;
+            max-width: 350px; margin: 50px auto; background: white; padding: 25px; 
+            border-radius: 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        .auth-card { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .auth-card h2 { margin-bottom: 10px; color: #007bff; }
         .auth-card p { font-size: 12px; color: #666; margin-bottom: 15px; }
 
@@ -42,7 +41,7 @@
 </head>
 <body>
 
-    <!-- HALAMAN LOGIN / DAFTAR EMAIL -->
+    <!-- HALAMAN LOGIN / DAFTAR EMAIL (Posisi Statis, Tidak Ada Overlay Tertutup) -->
     <div id="authPage">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
@@ -199,15 +198,14 @@
                     }
                     bukaAplikasi();
                 } else {
-                    document.getElementById('authPage').style.display = 'flex';
+                    document.getElementById('authPage').style.display = 'block';
                 }
             } catch(e) {
-                document.getElementById('authPage').style.display = 'flex';
+                document.getElementById('authPage').style.display = 'block';
             }
         }
         cekSesiAuth();
 
-        // Pasang Event Listener langsung lewat DOM yang aman dari blokir
         document.getElementById('btnDaftar').addEventListener('click', async function() {
             let email = document.getElementById('emailInput').value.trim();
             let password = document.getElementById('passwordInput').value.trim();
