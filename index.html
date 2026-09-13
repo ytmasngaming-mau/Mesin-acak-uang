@@ -16,11 +16,11 @@
         .active-page { display: block; }
 
         #authPage {
-            max-width: 350px; margin: 50px auto; background: white; padding: 25px; 
+            max-width: 350px; margin: 40px auto; background: white; padding: 25px; 
             border-radius: 10px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .auth-card h2 { margin-bottom: 10px; color: #007bff; }
-        .auth-card p { font-size: 12px; color: #666; margin-bottom: 15px; }
+        .auth-card p { font-size: 12px; color: #666; margin-bottom: 15px; line-height: 1.4; }
 
         .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .card h3 { font-size: 14px; color: #666; margin-bottom: 5px; }
@@ -41,13 +41,13 @@
 </head>
 <body>
 
-    <!-- HALAMAN LOGIN / DAFTAR EMAIL (Posisi Statis, Tidak Ada Overlay Tertutup) -->
+    <!-- HALAMAN LOGIN / DAFTAR DENGAN VERIFIKASI EMAIL -->
     <div id="authPage">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
-            <p>Masukkan Email & Sandi. Verifikasi dikirim ke Gmail!</p>
+            <p>Daftar/Masuk pakai Email. Wajib verifikasi link di Gmail agar bisa akses misi & WD!</p>
             <input type="email" id="emailInput" placeholder="Masukkan Email Aktif">
-            <input type="password" id="passwordInput" placeholder="Password (Minimal 6 Karakter)">
+            <input type="password" id="passwordInput" placeholder="Password (Min. 6 Karakter)">
             <button class="btn" id="btnLogin">Masuk Akun</button>
             <button class="btn" id="btnDaftar" style="background: #28a745;">Daftar Akun Baru</button>
         </div>
@@ -59,7 +59,7 @@
     <div id="beranda" class="page">
         <div class="card">
             <h3>Halo, <span id="userAktif" style="color:#007bff;">Guest</span></h3>
-            <p style="font-size: 12px; color: #28a745; margin-top: 2px;">● Terverifikasi Supabase Auth</p>
+            <p style="font-size: 12px; color: #28a745; margin-top: 2px;">● Email Terverifikasi & Aktif</p>
         </div>
         <div class="card">
             <h3>Saldo Koin (Rupiah)</h3>
@@ -181,10 +181,21 @@
             last_checkin: '' 
         };
 
+        // Cek Sesi dan Validasi Verifikasi Email
         async function cekSesiAuth() {
             try {
                 let { data: { session } } = await supabase.auth.getSession();
                 if (session && session.user) {
+                    // Cek apakah email sudah diverifikasi oleh Supabase
+                    let userEmailObj = session.user;
+                    // Supabase auth menyimpan status verifikasi di email_confirmed_at atau provider
+                    if (!userEmailObj.email_confirmed_at && userEmailObj.app_metadata.provider === 'email') {
+                        alert("Akun belum diverifikasi! Silakan cek kotak masuk atau folder Spam di Gmail lu, lalu klik link verifikasinya.");
+                        await supabase.auth.signOut();
+                        document.getElementById('authPage').style.display = 'block';
+                        return;
+                    }
+
                     currentUser = session.user.email.split('@')[0];
                     let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
                     if (data) {
@@ -206,6 +217,7 @@
         }
         cekSesiAuth();
 
+        // Event Tombol Daftar
         document.getElementById('btnDaftar').addEventListener('click', async function() {
             let email = document.getElementById('emailInput').value.trim();
             let password = document.getElementById('passwordInput').value.trim();
@@ -226,10 +238,11 @@
             if (error) {
                 alert("Gagal daftar: " + error.message);
             } else {
-                alert("Pendaftaran berhasil! Cek Gmail lu untuk klik link verifikasi sebelum login.");
+                alert("Pendaftaran berhasil! Link verifikasi telah dikirim otomatis ke Gmail lu. Silakan cek inbox/spam untuk mengaktifkan akun.");
             }
         });
 
+        // Event Tombol Masuk
         document.getElementById('btnLogin').addEventListener('click', async function() {
             let email = document.getElementById('emailInput').value.trim();
             let password = document.getElementById('passwordInput').value.trim();
@@ -245,8 +258,14 @@
             });
 
             if (error) {
-                alert("Gagal masuk: " + error.message + "\n(Pastikan email sudah diverifikasi di Gmail!)");
+                alert("Gagal masuk: " + error.message);
             } else {
+                // Cek verifikasi setelah login
+                if (!data.user.email_confirmed_at) {
+                    alert("Akses ditolak! Email lu belum diverifikasi. Cek Gmail lu sekarang.");
+                    await supabase.auth.signOut();
+                    return;
+                }
                 location.reload();
             }
         });
