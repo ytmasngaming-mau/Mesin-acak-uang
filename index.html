@@ -46,11 +46,11 @@
     <div id="authPage">
         <div class="auth-card">
             <h2>Mesin Acak Uang</h2>
-            <p>Masukkan Email & Sandi. Verifikasi email dikirim ke Gmail!</p>
+            <p>Masukkan Email & Sandi. Verifikasi dikirim ke Gmail!</p>
             <input type="email" id="emailInput" placeholder="Masukkan Email Aktif">
             <input type="password" id="passwordInput" placeholder="Password (Minimal 6 Karakter)">
-            <button class="btn" onclick="loginEmail()">Masuk Akun</button>
-            <button class="btn" style="background: #28a745;" onclick="daftarEmail()">Daftar Akun Baru</button>
+            <button class="btn" id="btnLogin">Masuk Akun</button>
+            <button class="btn" id="btnDaftar" style="background: #28a745;">Daftar Akun Baru</button>
         </div>
     </div>
 
@@ -182,31 +182,33 @@
             last_checkin: '' 
         };
 
-        // Cek sesi login otomatis Supabase Auth
         async function cekSesiAuth() {
-            let { data: { session } } = await supabase.auth.getSession();
-            if (session && session.user) {
-                currentUser = session.user.email.split('@')[0];
-                
-                let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
-                if (data) {
-                    userData = data;
+            try {
+                let { data: { session } } = await supabase.auth.getSession();
+                if (session && session.user) {
+                    currentUser = session.user.email.split('@')[0];
+                    let { data } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+                    if (data) {
+                        userData = data;
+                    } else {
+                        await supabase.from('users').insert([
+                            { username: currentUser, saldo_rp: 0, poin_spin: 50 }
+                        ]);
+                        let { data: newData } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
+                        if(newData) userData = newData;
+                    }
+                    bukaAplikasi();
                 } else {
-                    await supabase.from('users').insert([
-                        { username: currentUser, saldo_rp: 0, poin_spin: 50 }
-                    ]);
-                    let { data: newData } = await supabase.from('users').select('*').eq('username', currentUser).maybeSingle();
-                    if(newData) userData = newData;
+                    document.getElementById('authPage').style.display = 'flex';
                 }
-                bukaAplikasi();
-            } else {
+            } catch(e) {
                 document.getElementById('authPage').style.display = 'flex';
             }
         }
         cekSesiAuth();
 
-        // Fungsi Daftar Akun dengan Verifikasi Email
-        async function daftarEmail() {
+        // Pasang Event Listener langsung lewat DOM yang aman dari blokir
+        document.getElementById('btnDaftar').addEventListener('click', async function() {
             let email = document.getElementById('emailInput').value.trim();
             let password = document.getElementById('passwordInput').value.trim();
 
@@ -226,12 +228,11 @@
             if (error) {
                 alert("Gagal daftar: " + error.message);
             } else {
-                alert("Pendaftaran berhasil! Silakan cek kotak masuk/spam di Gmail lu untuk klik link verifikasi sebelum login.");
+                alert("Pendaftaran berhasil! Cek Gmail lu untuk klik link verifikasi sebelum login.");
             }
-        }
+        });
 
-        // Fungsi Login Email
-        async function loginEmail() {
+        document.getElementById('btnLogin').addEventListener('click', async function() {
             let email = document.getElementById('emailInput').value.trim();
             let password = document.getElementById('passwordInput').value.trim();
 
@@ -246,11 +247,11 @@
             });
 
             if (error) {
-                alert("Gagal masuk: " + error.message + "\n(Pastikan email sudah diverifikasi lewat link di Gmail!)");
+                alert("Gagal masuk: " + error.message + "\n(Pastikan email sudah diverifikasi di Gmail!)");
             } else {
                 location.reload();
             }
-        }
+        });
 
         async function syncKeDatabase() {
             if(!currentUser) return;
